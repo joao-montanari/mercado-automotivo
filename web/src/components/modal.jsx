@@ -2,21 +2,71 @@
 import { Dialog, Transition } from '@headlessui/react'
 import { Fragment, useState } from 'react'
 
+import Venda from './venda';
+
 export default function Modal(props) {
-  let [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const [alocacoes, setAlocacoes] = useState([]);
+  let copyAlocacoes = [];
+
+  const fetchVeiculo = async (id) => {
+    try {
+      const response = await fetch(`http://localhost:5000/automoveis/${id}`);
+      const jsonData = await response.json();
+      return jsonData;
+    } catch(error) {
+      console.log('Error: ', error)
+    }
+  }
+
+  const fetchConcessionaria = async (id) => {
+    try {
+      const response = await fetch(`http://localhost:5000/concessionarias/${id}`);
+      const jsonData = await response.json();
+      return jsonData;
+    } catch(error) {
+      console.log('Error: ', error)
+    }
+  }
+
+  const openModal = async () => {
+    setIsOpen(true);
+    for (let i = 0; i < props.dados.length; i++) {
+      var item = props.dados[i]
+      if (item.area === props.area) {
+        let veiculo = await fetchVeiculo(item.automovel.id);
+        let concessionaria = await fetchConcessionaria(item.concessionaria.id);
+        copyAlocacoes.push(
+          {
+            alocacao : item.id,
+            automovel : veiculo,
+            concessionaria : concessionaria,
+            quantidade : item.quantidade
+          }
+        )
+      }
+    }
+    setAlocacoes(copyAlocacoes);
+    console.log(copyAlocacoes)
+  }
+
+  const closeModal = () => {
+    setIsOpen(false);
+    setAlocacoes([])
+  }
 
   return (
     <>
       <button
         type="button"
-        onClick={() => setIsOpen(true)}
-        className='w-full h-full'
+        onClick={openModal}
+        className='w-full h-full hover:bg-[#0000FF] hover:text-white duration-300'
       >
-        {props.numero}
+        {props.area}
       </button>
 
       <Transition appear show={isOpen} as={Fragment}>
-        <Dialog as="div" className="relative z-10" onClose={() => setIsOpen(false)}>
+        <Dialog as="div" className="relative z-10" onClose={closeModal}>
           <Transition.Child
             as={Fragment}
             enter="ease-out duration-300"
@@ -41,22 +91,37 @@ export default function Modal(props) {
                 leaveTo="opacity-0 scale-95"
               >
                 <Dialog.Panel 
-                  style={{borderLeft: `6px solid ${props.cor}`}}
-                  className="w-full max-w-md transform overflow-hidden rounded-lg bg-white p-6 text-left align-middle shadow-xl transition-all"
+                  className="w-full max-w-xl transform overflow-hidden rounded-lg bg-white p-6 text-left align-middle shadow-xl transition-all"
                 >
                     <Dialog.Title
                         as="h1"
                         className="text-xl text-gray-900"
                     >
-                      <strong>Área: </strong>{props.numero}
+                      <strong>Área: </strong>{props.area}
                     </Dialog.Title>
-                    <div>
-                    </div>
+                    {
+                      (alocacoes.length > 0)?
+                        alocacoes.map((alocacao, i) => (
+                          <div className='flex my-4 relative' key={i}>
+                            <h1 className='text-[#7814FF] p-1' >Modelo: {alocacao.automovel.modelo} | Preço: R$ {alocacao.automovel.preco}</h1>
+                            <Venda
+                              id={alocacao.alocacao}
+                              concessionarias={[alocacao.concessionaria]}
+                              automovel={alocacao.automovel}
+                              quantidade={alocacao.quantidade}
+                            />
+                          </div>
+                        ))
+                      :
+                        <h1 className='text-red-400 text-center my-5'>
+                          Não existem veiculos disponiveis nessa área
+                        </h1>
+                    }
                   <div className="mt-4">
                     <button
                       type="button"
-                      className="w-full bg-blue-300 p-2 rounded-lg text-blue-900 border border-white hover:border-blue-900 hover:bg-blue-100 duration-500"
-                      onClick={() => setIsOpen(false)}
+                      className="w-full bg-red-300 p-2 rounded-lg text-red-900 border border-white hover:border-red-900 hover:bg-red-100 duration-500"
+                      onClick={closeModal}
                     >
                       Fechar
                     </button>

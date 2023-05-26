@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Response
 from models.alocacao import Alocacao
 import ormar
+from models.requests.alocacao_update import AlocacaoUpdate
 
 router = APIRouter()
 
@@ -30,3 +31,14 @@ async def delete_automovel(alocacao_id: int, response: Response):
     except:
         response.status_code = 404
         return {'mensagem':'id nao encontrado'}
+    
+@router.patch('/{alocacao_id}')
+async def path_answer(propriedades_atualizacao: AlocacaoUpdate, alocacao_id: int, response: Response):
+    try:
+        alocacao_salva = await Alocacao.objects.get(id = alocacao_id)
+        propriedades_atualizadas = propriedades_atualizacao.dict(exclude_unset=True)
+        await alocacao_salva.update(**propriedades_atualizadas)
+        return alocacao_salva
+    except ormar.exceptions.NoMatch:
+        response.status_code = 404
+        return {'mensagem' : 'Entidade não encontrada'}
